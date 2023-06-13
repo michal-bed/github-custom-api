@@ -102,9 +102,9 @@ public class HandlerController {
         return null;
     }
 
-    private HttpRequest buildApiRequest(String bbranchesUrl) throws URISyntaxException {
+    private HttpRequest buildApiRequest(String branchesUrl) throws URISyntaxException {
         return HttpRequest.newBuilder()
-                .uri(new URI(bbranchesUrl))
+                .uri(new URI(branchesUrl))
                 .headers("Accept", "application/vnd.github+json",
                         "Authorization", String.format("Bearer %s", GITHUB_ACCESS_TOKEN))
                 .GET()
