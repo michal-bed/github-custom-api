@@ -27,32 +27,40 @@ public class HandlerController {
     static private Optional<String> errorMessage = Optional.empty();
 
     @GetMapping(value = "/custom-github-api/repos/{username}", produces = { "application/json" })
-    ResponseEntity<CustomResponseInterface> getALlGithubReposInfoForUser(@PathVariable String username,
-                                                                        @RequestHeader("Accept") String acceptHeader)
+    ResponseEntity<CustomResponseInterface> getAllGithubReposInfoForUser(@PathVariable String username)
             throws URISyntaxException, IOException, InterruptedException {
 
+        return getCustomResponseEntity(username);
+
+    }
+
+    private ResponseEntity<CustomResponseInterface>
+        getCustomResponseEntity(String username) throws URISyntaxException, IOException, InterruptedException {
         ArrayList<CustomResponseGithubRepository> responseRepos = new ArrayList<>();
         for (int page = 1; ;page++) {
 
             var repos = getGithubRepositoriesForUser(username, page);
             ResponseEntity<CustomResponseInterface> finalResponse =
-                    getResponse(responseRepos, page, repos);
+                    getResponse(responseRepos, repos);
             if (finalResponse != null) return finalResponse;
 
             assert repos != null;
-            for (var repo : repos) {
-                ArrayList<GithubBranch> branches = new ArrayList<>();
-                var branchesUrl = repo.getBranchesUrl();
-                JsonNode body = getJsonNode(branchesUrl);
-
-                getAllBranchesForGivenUrl(branches, body);
-
-                responseRepos.add(
-                        new CustomResponseGithubRepository(repo.getName(),
-                                repo.getOwner(), branches));
-            }
+            addReposInfoToResponseRepos(responseRepos, repos);
         }
+    }
 
+    private void addReposInfoToResponseRepos(ArrayList<CustomResponseGithubRepository> responseRepos, List<GithubRepository> repos) throws URISyntaxException, IOException, InterruptedException {
+        for (var repo : repos) {
+            ArrayList<GithubBranch> branches = new ArrayList<>();
+            var branchesUrl = repo.getBranchesUrl();
+            JsonNode body = getJsonNode(branchesUrl);
+
+            getAllBranchesForGivenUrl(branches, body);
+
+            responseRepos.add(
+                    new CustomResponseGithubRepository(repo.getName(),
+                            repo.getOwner(), branches));
+        }
     }
 
     private void getAllBranchesForGivenUrl(List<GithubBranch> branches, JsonNode body) {
@@ -60,9 +68,7 @@ public class HandlerController {
         while (elements.hasNext()) {
             JsonNode branch = elements.next();
             //                System.out.println("branch = " + branch);
-            assert branch.get("name") != null;
-            assert branch.get("commit") != null;
-            assert branch.get("commit").get("sha") != null;
+            executeRepoOrBranchAsserts(branch, "commit", "sha");
             var githubBranch =
                     new GithubBranch(branch.get("name").textValue(),
                             new GithubCommit((branch.get("commit").get("sha").textValue())));
@@ -70,8 +76,8 @@ public class HandlerController {
         }
     }
 
-    private JsonNode getJsonNode(String branches_url) throws URISyntaxException, IOException, InterruptedException {
-        HttpRequest request = buildApiRequest(branches_url);
+    private JsonNode getJsonNode(String branchesUrl) throws URISyntaxException, IOException, InterruptedException {
+        HttpRequest request = buildApiRequest(branchesUrl);
 
         HttpResponse<String> response = getStringHttpResponse(request);
 
@@ -79,18 +85,20 @@ public class HandlerController {
     }
 
     private ResponseEntity<CustomResponseInterface> getResponse
-            (List<CustomResponseGithubRepository> responseRepos, int page,
+            (List<CustomResponseGithubRepository> responseRepos,
              List<GithubRepository> repos) {
-        if ((page == 1 && repos == null) || (page != 1 && repos.isEmpty())) {
-            return ResponseEntity.status(404).body(
-                    new ErrorApiResponse(404, errorMessage.orElse("Unrecognized cause")));
+        if (repos == null && errorMessage.isPresent()) {
+            var errorResponse =
+                    new ErrorApiResponse(404, errorMessage.orElse("Unrecognized cause"));
+            errorMessage = Optional.empty();
+            return ResponseEntity.status(404).body(errorResponse);
         }
-//        else if (repos == null)
-//        {
-//            var customResponse = new CustomApiResponse(responseRepos);
-//            //        System.out.println("customResponse = " + customResponse);
-//            return ResponseEntity.status(HttpStatus.OK).body(customResponse);
-//        }
+        else if (repos == null)
+        {
+            var customResponse = new CustomApiResponse(responseRepos);
+            //        System.out.println("customResponse = " + customResponse);
+            return ResponseEntity.status(HttpStatus.OK).body(customResponse);
+        }
         return null;
     }
 
@@ -98,18 +106,13 @@ public class HandlerController {
         return HttpRequest.newBuilder()
                 .uri(new URI(branches_url))
                 .headers("Accept", "application/vnd.github+json",
-                        "Authentication", String.format("Bearer %s", GITHUB_ACCESS_TOKEN))
+                        "Authorization", String.format("Bearer %s", GITHUB_ACCESS_TOKEN))
                 .GET()
                 .build();
     }
 
     private List<GithubRepository> getGithubRepositoriesForUser(String username, int page) throws URISyntaxException, IOException, InterruptedException {
-        HttpRequest request = HttpRequest.newBuilder()
-                .uri(new URI(String.format("https://api.github.com/users/%s/repos?per_page=100&page=%s", username, page)))
-                .headers("Accept", "application/vnd.github+json",
-                        "Authentication", String.format("Bearer %s", GITHUB_ACCESS_TOKEN))
-                .GET()
-                .build();
+        HttpRequest request = getGithubUserRepositoriesHttpRequest(username, page);
 
         HttpResponse<String> response = getStringHttpResponse(request);
 
@@ -123,10 +126,20 @@ public class HandlerController {
 
     }
 
+    private HttpRequest getGithubUserRepositoriesHttpRequest(String username, int page) throws URISyntaxException {
+        return HttpRequest.newBuilder()
+                .uri(new URI(String.format("https://api.github.com/users/%s/repos?per_page=100&page=%s", username, page)))
+                .headers("Accept", "application/vnd.github+json",
+                        "Authorization", String.format("Bearer %s", GITHUB_ACCESS_TOKEN))
+                .GET()
+                .build();
+    }
+
     private void getPublicReposThatAreNotForks(ArrayList<GithubRepository> repos, Iterator<JsonNode> elements) {
         while (elements.hasNext()) {
             JsonNode repo = elements.next();
 //            System.out.println("repo = " + repo);
+            executeRepoOrBranchAsserts(repo, "name", "login");
             if(repo.get("fork") != null && !repo.get("fork").booleanValue()) {
                 var branchesUrl = repo.get("branches_url").textValue();
                 branchesUrl = branchesUrl.substring(0, branchesUrl.length() - 9);
@@ -138,6 +151,12 @@ public class HandlerController {
 //                System.out.println("githubRepo = " + githubRepo);
             }
         }
+    }
+
+    private void executeRepoOrBranchAsserts(JsonNode node, String arg1, String arg2) {
+        assert node.get("name") != null;
+        assert node.get(arg1) != null;
+        assert node.get(arg1).get(arg2) != null;
     }
 
     private boolean isEmptyOrErrorOccurred(JsonNode body) {
