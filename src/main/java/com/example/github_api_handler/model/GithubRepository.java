@@ -5,12 +5,12 @@ import java.io.Serializable;
 public class GithubRepository implements Serializable {
     private String name;
     private String owner;
-    private String branches_url;
+    private String branchesUrl;
 
     public GithubRepository(String name, String owner, String branches_url) {
         this.name = name;
         this.owner = owner;
-        this.branches_url = branches_url;
+        this.branchesUrl = branches_url;
     }
 
     public String getName() {
@@ -29,11 +29,11 @@ public class GithubRepository implements Serializable {
         this.owner = owner;
     }
 
-    public String getBranches_url() {
-        return branches_url;
+    public String getBranchesUrl() {
+        return branchesUrl;
     }
 
-    public void setBranches_url(String branches_url) {
-        this.branches_url = branches_url;
+    public void setBranchesUrl(String branchesUrl) {
+        this.branchesUrl = branchesUrl;
     }
 }
