@@ -135,7 +135,7 @@ public class HandlerController {
                 .build();
     }
 
-    private void getPublicReposThatAreNotForks(ArrayList<GithubRepository> repos, Iterator<JsonNode> elements) {
+    private void getPublicReposThatAreNotForks(List<GithubRepository> repos, Iterator<JsonNode> elements) {
         while (elements.hasNext()) {
             JsonNode repo = elements.next();
 //            System.out.println("repo = " + repo);
