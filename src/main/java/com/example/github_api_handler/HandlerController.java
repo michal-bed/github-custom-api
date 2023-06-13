@@ -4,7 +4,6 @@ import com.example.github_api_handler.model.*;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -36,7 +35,7 @@ public class HandlerController {
 
             var repos = getGithubRepositoriesForUser(username, page);
             ResponseEntity<CustomResponseInterface> finalResponse =
-                    getResponse(responseRepos, page, repos);
+                    getResponse(page, repos);
             if (finalResponse != null) return finalResponse;
 
             assert repos != null;
@@ -79,18 +78,11 @@ public class HandlerController {
     }
 
     private ResponseEntity<CustomResponseInterface> getResponse
-            (List<CustomResponseGithubRepository> responseRepos, int page,
-             List<GithubRepository> repos) {
+            (int page, List<GithubRepository> repos) {
         if ((page == 1 && repos == null) || (page != 1 && repos.isEmpty())) {
             return ResponseEntity.status(404).body(
                     new ErrorApiResponse(404, errorMessage.orElse("Unrecognized cause")));
         }
-//        else if (repos == null)
-//        {
-//            var customResponse = new CustomApiResponse(responseRepos);
-//            //        System.out.println("customResponse = " + customResponse);
-//            return ResponseEntity.status(HttpStatus.OK).body(customResponse);
-//        }
         return null;
     }
 
