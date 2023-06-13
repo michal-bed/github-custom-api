@@ -26,12 +26,6 @@ public class HandlerController {
     ResponseEntity<CustomResponseInterface> getALlGithubReposInfoForUser(@PathVariable String username,
                                                                         @RequestHeader("Accept") String acceptHeader)
             throws URISyntaxException, IOException, InterruptedException {
-       // This part is not being used as earlier a built-in exception handling is invoked
-//        Look at Exception resolver
-        if (!acceptHeader.equals("application/json"))
-        {
-            return ResponseEntity.status(406).body(new ErrorApiResponse(406, "Not Supported"));
-        }
 
         ArrayList<CustomResponseGithubRepository> responseRepos = new ArrayList<>();
         for (int page = 1; ;page++) {
