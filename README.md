@@ -3,7 +3,7 @@
 
 ## Overview
 
-This is a custom GitHub API project that allows to retriew and list all public GitHub repositories that are not forks for the specified user.
+This is a custom GitHub API project that allows to retrieve and list all public GitHub repositories that are not forks for the specified user.
 
 
 ## Run Locally
